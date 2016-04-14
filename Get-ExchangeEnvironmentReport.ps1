@@ -8,7 +8,7 @@
 	THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
 	RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 	
-	Version 1.5.9, 2015-06-16
+	Version 1.5.8, 2nd Feb 2014
 	
     .DESCRIPTION
 	
@@ -61,12 +61,6 @@
 	
 	IMPORTANT NOTE: The script requires WMI and Remote Registry access to Exchange servers from the server 
 	it is run from to determine OS version, Update Rollup, Exchange 2007/2003 cluster and DB size information.
-
-    .NOTES
-    
-    Revision History 
-    -------------------------------------------------------------------------------- 
-    1.5.9    Try/Catch added for $null referenced databases (TST)
 	
 	.PARAMETER HTMLReport
     Filename to write HTML Report to
@@ -109,12 +103,13 @@ param(
     )
 
 # Sub-Function to Get Database Information. Shorter than expected..
+# 2016-04-14 Sorting added, Thomas Stensitzki
 function _GetDAG
 {
 	param($DAG)
 	@{Name			= $DAG.Name.ToUpper()
 	  MemberCount	= $DAG.Servers.Count
-	  Members		= [array]($DAG.Servers | % { $_.Name })
+	  Members		= [array]($DAG.Servers | Sort-Object Name | % { $_.Name })
 	  Databases		= @()
 	  }
 }
@@ -131,6 +126,7 @@ function _GetDB
 	
 	# Mailbox Average Sizes
 	$MailboxStatistics = [array]($ExchangeEnvironment.Servers[$Database.Server.Name].MailboxStatistics | Where {$_.Database -eq $Database.Identity})
+
 	if ($MailboxStatistics)
 	{
 		[long]$MailboxItemSizeB = 0
@@ -168,8 +164,9 @@ function _GetDB
 		$FreeLogDiskSpace=$null
 		$FreeDatabaseDiskSpace=$null
 	}
-	
-	if ($Database.ExchangeVersion.ExchangeBuild.Major -ge 14 -and $E2010)
+
+
+	if($Database.ExchangeVersion.ExchangeBuild.Major -ge 14 -and $E2010)
 	{
 		# Exchange 2010 Database Only
 		$CopyCount = [int]$Database.Servers.Count
@@ -197,15 +194,8 @@ function _GetDB
 			$ArchiveAverageSize = 0
 		}
 		# DB Size / Whitespace Info
-        # 2015-06-16 Thomas Stensitzki, try/catch added
-        try {
-		    [long]$Size = $Database.DatabaseSize.ToBytes()
-		    [long]$Whitespace = $Database.AvailableNewMailboxSpace.ToBytes()
-        } 
-        catch {
-		    [long]$Size = 0
-		    [long]$Whitespace = 0
-        }
+		[long]$Size = $Database.DatabaseSize.ToBytes()
+		[long]$Whitespace = $Database.AvailableNewMailboxSpace.ToBytes()
 		$StorageGroup = $null
 		
 	} else {
@@ -221,6 +211,7 @@ function _GetDB
 		if (!$Size)
 		{
 			Write-Warning "Cannot detect database size via WMI for $($Database.Server.Name)"
+            # Write-Warning "Cannot detect database size via WMI for $($Database.Server)"
 			[long]$Size = 0
 			[long]$Whitespace = 0
 		} else {
@@ -316,8 +307,8 @@ function _GetExSvr
 		$ExchangeMajorVersion = "$($ExchangeServer.AdminDisplayVersion.Major).$($ExchangeServer.AdminDisplayVersion.Minor)"
 		$ExchangeSPLevel = $ExchangeServer.AdminDisplayVersion.FilePatchLevelDescription.Replace("Service Pack ","")
 	} else {
-		$ExchangeMajorVersion = $ExchangeServer.AdminDisplayVersion.Major
-		$ExchangeSPLevel = $ExchangeServer.AdminDisplayVersion.Minor
+		$ExchangeMajorVersion = $ExchangeServer.AdminDisplayVersion.Major #[int](($ExchangeServer.AdminDisplayVersion).Replace("Version ","").Split(" ")[0]).Split(".")[0] #$ExchangeServer.AdminDisplayVersion.Major
+		$ExchangeSPLevel = $ExchangeServer.AdminDisplayVersion.Minor #[int](($ExchangeServer.AdminDisplayVersion).Replace("Version ","").Split(" ")[0]).Split(".")[1] #$ExchangeServer.AdminDisplayVersion.Minor
 	}
 	# Exchange 2007+
 	if ($ExchangeMajorVersion -ge 8)
@@ -389,7 +380,7 @@ function _GetExSvr
 					{
 						$tRU = $_.Split(" ")[2]
 						if ($tRU -like "*-*") { $tRUV=$tRU.Split("-")[1]; $tRU=$tRU.Split("-")[0] } else { $tRUV="" }
-						if ($tRU -ge $RollupLevel) { $RollupLevel=$tRU; $RollupVersion=$tRUV }
+						if ([int]$tRU -ge [int]$RollupLevel) { $RollupLevel=$tRU; $RollupVersion=$tRUV }
 					}
 				}
 			}
@@ -927,6 +918,10 @@ $ExSPLevelStrings = @{"0" = "RTM"
                       "CU6" = "CU6"
                       "CU7" = "CU7"
                       "CU8" = "CU8"
+                      "CU9" = "CU9"
+                      "CU10" = "CU10"
+                      "CU11" = "CU11"
+                      "CU12" = "CU12"
                       "SP1" = "SP1"
                       "SP2" = "SP2"
                       "SP3" = "SP3"}
@@ -972,11 +967,13 @@ if ($E2010)
 	_UpProg1 90 "Getting Databases" 1
     if ($E2013) 
     {	
-        $Databases = [array](Get-MailboxDatabase -IncludePreExchange2013 -Status)  | Where {$_.Server -like $ServerFilter} 
+        # 2016-04-14 Sorting added, Thomas Stensitzki
+        $Databases = [array](Get-MailboxDatabase -IncludePreExchange2013 -Status) | Sort-Object Name | Where {$_.Server -like $ServerFilter} 
     }
     elseif ($E2010)
     {	
-        $Databases = [array](Get-MailboxDatabase -IncludePreExchange2010 -Status)  | Where {$_.Server -like $ServerFilter} 
+        # 2016-04-14 Sorting added, Thomas Stensitzki
+        $Databases = [array](Get-MailboxDatabase -IncludePreExchange2010 -Status) | Sort-Object Name | Where {$_.Server -like $ServerFilter} 
     }
 	$DAGs = [array](Get-DatabaseAvailabilityGroup) | Where {$_.Servers -like $ServerFilter}
 } else {
@@ -984,7 +981,8 @@ if ($E2010)
 	$ArchiveMailboxStats = $null	
 	$DAGs = $null
 	_UpProg1 90 "Getting Databases" 1
-	$Databases = [array](Get-MailboxDatabase -IncludePreExchange2007 -Status) | Where {$_.Server -like $ServerFilter}
+    # 2016-04-14 Sorting added, Thomas Stensitzki
+	$Databases = [array](Get-MailboxDatabase -IncludePreExchange2007 -Status) | Sort-Object Name | Where {$_.Server -like $ServerFilter}
     $ExchangeEnvironment.Add("RemoteMailboxes",0)
 }
 
@@ -1151,7 +1149,24 @@ $Output | Out-File $HTMLReport
 if ($SendMail)
 {
 	_UpProg1 95 "Sending mail message.." 4
-	Send-MailMessage -Attachments $HTMLReport -To $MailTo -From $MailFrom -Subject "Exchange Environment Report" -BodyAsHtml $Output -SmtpServer $MailServer
+
+    # 2015-09-24 TST, Changed to .NET send method to work as scheduled job
+
+	# Send-MailMessage -Attachments $HTMLReport -To $MailTo -From $MailFrom -Subject "Exchange Environment Report" -BodyAsHtml $Output -SmtpServer $MailServer -Port 25
+
+    $smtpMail = New-Object Net.Mail.SmtpClient($MailServer) 
+
+    $smtpAttachment = New-Object Net.Mail.Attachment($HTMLReport, 'text/plain')
+
+    $smtpMessage = New-Object System.Net.Mail.MailMessage $MailFrom, $MailTo
+    $smtpMessage.Subject = "Exchange Environment Report"
+    $smtpMessage.Body = $Output   
+    $smtpMessage.IsBodyHtml = $true
+    $smtpMessage.Attachments.Add($smtpAttachment)
+
+    $smtpMail.Send($smtpMessage)
+
+    Return 0
 }
 
 if ($ScheduleAs)
@@ -1169,3 +1184,5 @@ if ($ScheduleAs)
 	Write-Output "Task to schedule: $($task)"
 	schtasks /Create /RU $ScheduleAs /RP /SC DAILY /ST 22:00 /TN EER /TR $task
 }
+
+Return 0
