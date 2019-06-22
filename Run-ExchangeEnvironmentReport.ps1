@@ -1,0 +1,1 @@
+.\Get-ExchangeEnvironmentReport.ps1 -HTMLReport ExchangeEnvironment.html -SendMail -ViewEntireForest $true -MailFrom roaster@mcsmemail.de -MailTo grillmaster@mcsmemail.de -MailServer relay.mcsmemail.de

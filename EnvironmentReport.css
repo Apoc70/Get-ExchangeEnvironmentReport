@@ -1,0 +1,129 @@
+body {
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    }
+h1 {
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+    font-size: 16px;
+    font-weight
+    }
+h2 { 
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+    font-size: 14px; 
+    }
+
+/* Header, first table row showing labels for totals */
+table.header {
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  border: 0px;
+  padding: 3px;
+  font-size: 11px;
+}
+table tr.header {
+  background: #009900;
+}
+table th.header {
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  color: #ffffff;  
+}
+
+/* Site overview */
+table.overview {
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weicht: bold;
+  padding: 3px;
+  border: 0px;
+  width: 100%
+}
+table th.overview {
+ color: #ffffff;  
+}
+
+table tr.overviewcolheader {
+  background: #000099;
+}
+table tr.overviewcolsubheader {
+  background: #0000FF;
+}
+
+table tr.pre2007overviewcolheader {
+  background: #880099;
+}
+table tr.pre2007overviewcolsubheader {
+  background: #8800CC;
+}
+
+table tr.alternaterow {
+  background: #dddddd
+}
+table td.roledata {
+  text-align: center;
+  background: #00FF00;
+}
+
+
+/* Subheader, Exchange Server Versions, Org and roles */
+table tr.subheader {
+  background: #009900;
+}
+table th.subheader {
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif, monospace, Lucida Console;
+  color: #ffffff;
+  font-size: 11px;
+  text-align: center;
+}
+
+/* Header data, Mailbox numbers in header table */
+table tr.headerdata {
+  background: #dddddd;
+}
+
+table td.headerdata {
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  color: #000000;
+  font-size: 11px;
+  text-align: center;
+}
+
+table.dagsummary {
+  border: 0px;
+  padding: 3px;
+  width: 100%;
+  font-size:8pt;
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  align: center;
+}
+table tr.dagsummary {
+  text-align: center;
+  background: #FF8000;
+}
+table tr.dagsummarynondag {
+  text-align: center;
+  background: #FF8000;
+}
+
+table.databases {
+  border: 0px;
+  padding: 3px;
+  width: 100%;
+  font-size:9pt;
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+}
+table tr.databases {
+  background: #FFD700;
+  text-align: center;
+}
+
+.dagtablefooter {
+  font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+  font-size:8pt;
+}
+
+.center {
+  text-align: center;
+}
+
+.alert {
+  color: red;
+}
