@@ -57,6 +57,10 @@ The PowerShell script does not gather information on public folders or analyzes 
 * Exchange Server Management Shell 2010 or newer
 * WMI and Remote Registry access from the computer running the script to all Exchange Servers
 
+## Eample Report
+
+![Example Report](/images/screenshot.png)
+
 ## Parameters
 
 ### Parameter
