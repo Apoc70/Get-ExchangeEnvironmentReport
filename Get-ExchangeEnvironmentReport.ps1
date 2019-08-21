@@ -10,6 +10,8 @@
     Version 2.0 June 2019
 
     Based on the original 1.6.2 version by Steve Goodman
+
+    Ideas, comments and suggestions to support@granikos.eu
 	
     .DESCRIPTION
 	
@@ -63,7 +65,10 @@
 	
     IMPORTANT NOTE: The script requires WMI and Remote Registry access to Exchange servers from the server 
     it is run from to determine OS version, Update Rollup, Exchange 2007/2003 cluster and DB size information.
-	
+  
+    .LINK  
+    http://scripts.granikos.eu
+
     .PARAMETER HTMLReport
     Filename to write HTML Report to
 	
@@ -83,12 +88,17 @@
     By default, true. Set the option in Exchange 2007 or 2010 to view all Exchange servers and recipients in the forest.
    
     .PARAMETER ServerFilter
-    Use a text based string to filter Exchange Servers by, e.g. NL-* -  Note the use of the wildcard (*) character to allow for multiple matches.
+    Use a text based string to filter Exchange Servers by, e.g., NL-* 
+    Note the use of the wildcard (*) character to allow for multiple matches.
     
     .EXAMPLE
     Generate the HTML report 
     .\Get-ExchangeEnvironmentReport.ps1 -HTMLReport .\report.html
-	
+
+    .EXAMPLE
+    Generate am HTL report and send the result as HTML email with attachment to the specified recipient using a dedicated smart host
+    .\Get-ExchangeEnvironmentReport.ps1 -HTMReport ExchangeEnvironment.html -SendMail -ViewEntireForet $true -MailFrom roaster@mcsmemail.de -MailTo grillmaster@mcsmemail.de -MailServer relay.mcsmemail.de
+    	
 #>
 [CmdletBinding()]
 param(
@@ -101,7 +111,7 @@ param(
   [string]$ServerFilter='*'
 )
 
-# Warning Limits
+# Warning Limits, adjust as needed
 $MinFreeDiskspace = 10 # Mark free space less than this value (%) in red
 $MaxDatabaseSize = 250 # Mark database larger than this value (GB) in red
 
@@ -323,7 +333,7 @@ function Get-ExchangeServerInformation {
     $ExchangeMajorVersion = [double]('{0}.{1}' -f $ExchangeServer.AdminDisplayVersion.Major, $ExchangeServer.AdminDisplayVersion.Minor)
     $ExchangeSPLevel = $ExchangeServer.AdminDisplayVersion.FilePatchLevelDescription.Replace('Service Pack ','')
   } 
-  elseif ($ExchangeServer.AdminDisplayVersion.Major -eq 15 -and $ExchangeServer.AdminDisplayVersion.Minor -eq 1) {
+  elseif ($ExchangeServer.AdminDisplayVersion.Major -eq 15 -and $ExchangeServer.AdminDisplayVersion.Minor -ge 1) {
     $ExchangeMajorVersion = [double]('{0}.{1}' -f $ExchangeServer.AdminDisplayVersion.Major, $ExchangeServer.AdminDisplayVersion.Minor)
     $ExchangeSPLevel = 0
   } 
@@ -426,13 +436,15 @@ function Get-ExchangeServerInformation {
       }
     }
 
-    # Rollup Level / Versions (Thanks to Bhargav Shukla http://bit.ly/msxGIJ)
+    # Rollup Level / Versions (Thanks to Bhargav Shukla https://bhargavs.com/index.php/2009/12/14/how-do-i-check-update-rollup-version-on-exchange-20xx-server/)
     switch([string]$ExchangeMajorVersion) {
-      # Exchange Server 2016
+      # Exchange Server 2016 / 2019
+      '15.2' {$RegKey="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\442189DC8B9EA5040962A6BED9EC1F1F\\Patches"}
       '15.1' {$RegKey="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\442189DC8B9EA5040962A6BED9EC1F1F\\Patches"}
-      # Exchange Server 2013
+      # Exchange Server 2010 / 2013
+      '15' {$RegKey="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\AE1D439464EB1B8488741FFA028E291C\\Patches"}
       '14' {$RegKey="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\AE1D439464EB1B8488741FFA028E291C\\Patches"}
-      # Exchange 
+      # Exchange 2007
       default {$RegKey="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\461C2B4266EDEF444B864AD6D9E5B613\\Patches"}
     }
     
@@ -445,6 +457,7 @@ function Get-ExchangeServerInformation {
     }
 
     if ($null -ne $RemoteRegistry) {
+        
       $RUKeys = $RemoteRegistry.OpenSubKey($RegKey).GetSubKeyNames() | ForEach-Object {"$RegKey\\$_"}
      
       if ($RUKeys) {
@@ -627,7 +640,7 @@ function Get-TotalsByRole {
       foreach ($Server in $Site.Value) {
 
         foreach ($Role in $Server.Roles) {
-          if ($TotalServersByRole[$Role] -eq $null) {
+          if ($null -eq $TotalServersByRole[$Role]) {
             $TotalServersByRole.Add($Role,1)
           } 
           else {
@@ -643,7 +656,7 @@ function Get-TotalsByRole {
     foreach ($Server in $ExchangeEnvironment.Pre2007['Pre 2007 Servers']) {
 			
       foreach ($Role in $Server.Roles) {
-        if ($TotalServersByRole[$Role] -eq $null) {
+        if ($null -eq $TotalServersByRole[$Role]) {
           $TotalServersByRole.Add($Role,1)
         } 
         else {
@@ -1112,7 +1125,8 @@ if ((Get-PSSnapin -Name Microsoft.Exchange.Management.PowerShell.Admin -ErrorAct
   if (Get-ExchangeServer | Where-Object {$_.AdminDisplayVersion.Major -gt 14}) {
     Write-Warning -Message "Exchange 2010 or higher detected. You'll get better results if you run this script from the latest management shell"
   }
-}else{
+}
+else{
     
   $E2010 = $true
 
@@ -1193,7 +1207,7 @@ $ExRoleStrings = @{'ClusteredMailbox' = @{Short='ClusMBX';Long='CCR/SCC Clustere
 # 2.1 Get Server, Exchange and Mailbox Information
 Show-ProgressBar -PercentComplete 1 -Status 'Getting Exchange Server List' -Stage 1
 
-$ExchangeServers = [array](Get-ExchangeServer $ServerFilter)
+$ExchangeServers = [array](Get-ExchangeServer $ServerFilter | Sort-Object Name)
 if (!$ExchangeServers) {
   throw ('No Exchange Servers matched by -ServerFilter {0}' -f $ServerFilter)
 }

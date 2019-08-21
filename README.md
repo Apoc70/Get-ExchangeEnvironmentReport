@@ -25,11 +25,11 @@ The reports shows the following:
     * Functional Roles
     * Operating System with Service Pack
 
-* Per Database Availability Group 
+* Per Database Availability Group
   * Total number of member servers
   * List of member servers
   * DAG databases
-    * Number of mailboxes and average mailbox size 
+    * Number of mailboxes and average mailbox size
     * Number of archive mailboxes and average archive mailbox size
     * Database size
     * Database whitespace
@@ -63,7 +63,34 @@ The PowerShell script does not gather information on public folders or analyzes 
 
 ## Parameters
 
-### Parameter
+### HTMLReport
+
+Filename to write HTML Report to
+
+### SendMail
+
+Send Mail after completion. Set to $True to enable. If enabled, -MailFrom, -MailTo, -MailServer are mandatory
+
+### MailFrom
+
+Email address to send from. Passed directly to Send-MailMessage as -From
+
+### MailTo
+
+Email address to send to. Passed directly to Send-MailMessage as -To
+
+### MailServer
+
+SMTP Mail server to attempt to send through. Passed directly to Send-MailMessage as -SmtpServer
+
+### ViewEntireForest
+
+By default, true. Set the option in Exchange 2007 or 2010 to view all Exchange servers and recipients in the forest.
+
+### ServerFilter
+
+Use a text based string to filter Exchange Servers by, e.g., NL-*
+Note the use of the wildcard (*) character to allow for multiple matches.
 
 ## Examples
 
