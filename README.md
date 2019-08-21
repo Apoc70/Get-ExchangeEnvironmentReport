@@ -8,7 +8,7 @@ Based on the original 1.6.2 version by Steve Goodman
 
 This script creates an HTML report showing the following information about an Exchange 2019, 2016, 2013, 2010, and, to a lesser extent, 2007 and 2003 environment.
 
-The reports shows the following:
+The report shows the following:
 
 * As summary
   * Total number of servers per Exchange Server version
@@ -17,7 +17,7 @@ The reports shows the following:
 
 * Per Active Directory Site
   * Total number of mailboxes
-  * Intern, External, and CAS Array names
+  * Internal, External, and CAS Array names
   * Exchange Server computers
     * Product version
     * Service Pack, Update Rollup, and/or Cumulative Update
@@ -57,7 +57,7 @@ The PowerShell script does not gather information on public folders or analyzes 
 * Exchange Server Management Shell 2010 or newer
 * WMI and Remote Registry access from the computer running the script to all Exchange Servers
 
-## Eample Report
+## Example Report
 
 ![Example Report](/images/screenshot.png)
 
@@ -96,7 +96,7 @@ Note the use of the wildcard (*) character to allow for multiple matches.
 
 ### Example 1
 
-Generate am HTL report and send the result as HTML email with attachment to the specified recipient using a dedicated smart host
+Generate an HTML report and send the result as HTML email with attachment to the specified recipient using a dedicated smart host
 
 ``` PowerShell
 .\Get-ExchangeEnvironmentReport.ps1 -HTMReport ExchangeEnvironment.html -SendMail -ViewEntireForet $true -MailFrom roaster@mcsmemail.de -MailTo grillmaster@mcsmemail.de -MailServer relay.mcsmemail.de
@@ -106,7 +106,7 @@ Generate am HTL report and send the result as HTML email with attachment to the 
 
 Generate an HTML report and save the report as 'report.html'
 
-``` PowerShell 
+``` PowerShell
 .\Get-ExchangeEnvironmentReport.ps1 -HTMLReport .\report.html
 ```
 
@@ -119,7 +119,7 @@ RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
 Download and vote at TechNet Gallery
 
-- [gallery.technet.microsoft.com/Exchange-Environment-11fa7246](gallery.technet.microsoft.com/Exchange-Environment-11fa7246)
+- [gallery.technet.microsoft.com/Exchange-Environment-11fa7246](https://gallery.technet.microsoft.com/Exchange-Environment-11fa7246)
 
 ## Credits
 

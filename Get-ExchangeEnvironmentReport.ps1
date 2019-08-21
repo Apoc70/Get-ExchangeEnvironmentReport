@@ -96,7 +96,7 @@
     .\Get-ExchangeEnvironmentReport.ps1 -HTMLReport .\report.html
 
     .EXAMPLE
-    Generate am HTL report and send the result as HTML email with attachment to the specified recipient using a dedicated smart host
+    Generate am HTML report and send the result as HTML email with attachment to the specified recipient using a dedicated smart host
     .\Get-ExchangeEnvironmentReport.ps1 -HTMReport ExchangeEnvironment.html -SendMail -ViewEntireForet $true -MailFrom roaster@mcsmemail.de -MailTo grillmaster@mcsmemail.de -MailServer relay.mcsmemail.de
     	
 #>
