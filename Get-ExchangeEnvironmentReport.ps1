@@ -7,7 +7,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 	
-    Version 2.0 June 2019
+    Version 2.1 2019-09-26
 
     Based on the original 1.6.2 version by Steve Goodman
 
@@ -65,6 +65,10 @@
 	
     IMPORTANT NOTE: The script requires WMI and Remote Registry access to Exchange servers from the server 
     it is run from to determine OS version, Update Rollup, Exchange 2007/2003 cluster and DB size information.
+
+    Updates
+    - 2.1 Table header label updated for a more consistent labeling
+    - 2.0 Initial Release
   
     .LINK  
     http://scripts.granikos.eu
@@ -859,11 +863,11 @@ function Get-HtmlDatabaseInformationTable {
   }
 
   $Output+="<th>Database Name</th>
-    <th>Mailboxes</th>
+    <th>Standard Mailboxes</th>
   <th>Av. Mailbox Size</th>"
 
   if ($ShowArchiveDBs) {
-    $Output+='<th>Archive MBs</th><th>Av. Archive Size</th>'
+    $Output+='<th>Archive Mailboxes</th><th>Av. Archive Size</th>'
   }
 
   $Output+='<th>DB Size</th><th>DB Whitespace</th>'
