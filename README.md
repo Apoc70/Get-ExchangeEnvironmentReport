@@ -55,7 +55,7 @@ The PowerShell script does not gather information on public folders or analyzes 
 ## Requirements
 
 * Exchange Server Management Shell 2010 or newer
-* WMI and Remote Registry access from the computer running the script to all Exchange Servers
+* WMI and Remote Registry access from the computer running the script to all internal Exchange Servers
 
 ## Example Report
 
@@ -65,7 +65,7 @@ The PowerShell script does not gather information on public folders or analyzes 
 
 ### HTMLReport
 
-Filename to write HTML Report to
+File name to write HTML Report to
 
 ### SendMail
 

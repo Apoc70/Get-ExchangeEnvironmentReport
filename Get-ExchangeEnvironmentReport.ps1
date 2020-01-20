@@ -959,7 +959,7 @@ function Get-HtmlDatabaseInformationTable {
 
   $Output+='</table><br />'
 
-  $Output+=("<p class='dagtablefooter'>Maximum mailbox database site: {0} GB<br/>Minumum free disk space: {1}%</p>" -f $MaxDatabaseSize, $MinFreeDiskspace)
+  $Output+=("<p class='dagtablefooter'>Maximum mailbox database size: {0} GB<br/>Minumum free disk space: {1}%</p>" -f $MaxDatabaseSize, $MinFreeDiskspace)
 	
   $Output
 }
