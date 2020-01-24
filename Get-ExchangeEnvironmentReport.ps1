@@ -7,7 +7,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 	
-    Version 2.1 2019-09-26
+    Version 2.2 January 2020
 
     Based on the original 1.6.2 version by Steve Goodman
 
@@ -65,10 +65,6 @@
 	
     IMPORTANT NOTE: The script requires WMI and Remote Registry access to Exchange servers from the server 
     it is run from to determine OS version, Update Rollup, Exchange 2007/2003 cluster and DB size information.
-
-    Updates
-    - 2.1 Table header label updated for a more consistent labeling
-    - 2.0 Initial Release
   
     .LINK  
     http://scripts.granikos.eu
@@ -94,6 +90,9 @@
     .PARAMETER ServerFilter
     Use a text based string to filter Exchange Servers by, e.g., NL-* 
     Note the use of the wildcard (*) character to allow for multiple matches.
+
+    .PARAMETER ShowDriveNames
+    Include drive names of EDB file path and LOG file folder in database report table
     
     .EXAMPLE
     Generate the HTML report 
@@ -102,7 +101,10 @@
     .EXAMPLE
     Generate am HTML report and send the result as HTML email with attachment to the specified recipient using a dedicated smart host
     .\Get-ExchangeEnvironmentReport.ps1 -HTMReport ExchangeEnvironment.html -SendMail -ViewEntireForet $true -MailFrom roaster@mcsmemail.de -MailTo grillmaster@mcsmemail.de -MailServer relay.mcsmemail.de
-    	
+
+    .EXAMPLE
+    Generate the HTML report including EDB and LOG drive names
+    .\Get-ExchangeEnvironmentReport.ps1 -ShowDriveNames -HTMLReport .\report.html
 #>
 [CmdletBinding()]
 param(
@@ -112,13 +114,16 @@ param(
   [string]$MailTo = '',
   [string]$MailServer = '',
   [bool]$ViewEntireForest=$true,
-  [string]$ServerFilter='*'
+  [string]$ServerFilter='*',
+  [switch]$ShowDriveNames
 )
 
 # Warning Limits, adjust as needed
 $MinFreeDiskspace = 10 # Mark free space less than this value (%) in red
 $MaxDatabaseSize = 250 # Mark database larger than this value (GB) in red
 
+# Default variables
+$NotAvailable = 'N/A'
 
 # Sub-Function to Get Database Information. Shorter than expected..
 function Get-DatabaseAvailabilityGroupInformation {
@@ -148,6 +153,23 @@ function Get-DatabaseInformation {
   # Circular Logging, Last Full Backup
   if ($Database.CircularLoggingEnabled) { $CircularLoggingEnabled='Yes' } else { $CircularLoggingEnabled = 'No' }
   if ($Database.LastFullBackup) { $LastFullBackup=$Database.LastFullBackup.ToString() } else { $LastFullBackup = 'Not Available' }
+
+  # Drive Letter, GitHub issue #4
+  $DriveNameEdb = ''
+  try {
+    $DriveNameEdb = $Database.EdbFilePath.DriveName
+  }
+  catch {
+    $DriveNameEdb = $NotAvailable
+  }
+
+  $DriveNameLog = ''
+  try {
+    $DriveNameLog = $Database.LogFolderPath.DriveName
+  }
+  catch {
+    $DriveNameLog = $NotAvailable
+  }
 	
   # Mailbox Average Sizes
   $MailboxStatistics = [array]($ExchangeEnvironment.Servers[$Database.Server.Name].MailboxStatistics | Where-Object {$_.Database -eq $Database.Identity})
@@ -258,6 +280,8 @@ function Get-DatabaseInformation {
     CopyCount = $CopyCount
     FreeLogDiskSpace = $FreeLogDiskSpace
     FreeDatabaseDiskSpace = $FreeDatabaseDiskSpace
+    DriveNameEdb = $DriveNameEdb
+    DriveNameLog = $DriveNameLog
   }
 }
 
@@ -304,7 +328,6 @@ function Get-ExchangeServerInformation {
   $MaxPrefDatabases = 0
   $MaxActiveDatabases = 0
   $NotSet = '--'
-  $NotAvailable = 'N/A'
 	
   # Get WMI Information: Operatin System
   $tWMI = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ExchangeServer.Name -ErrorAction SilentlyContinue
@@ -377,7 +400,7 @@ function Get-ExchangeServerInformation {
       }
 
       if($ExchangeMajorVersion -ge 14) {
-        $mailboxServer = Get-MailboxServer $($ExchangeServer.Name)
+        $mailboxServer = Get-MailboxServer -Identity $($ExchangeServer.Name)
 
         # 2019-05-20 TST Gather max active/max preferred database config
         if($ExchangeMajorVersion -lt 15) {
@@ -755,7 +778,7 @@ function Get-HtmlOverview {
   $AlternateRow=0
 	
   foreach ($Server in $Servers.Value) {
-    $Output+="<tr"
+    $Output+='<tr'
 
     if ($AlternateRow) {
       $Output+=" class='alternaterow'"
@@ -774,25 +797,25 @@ function Get-HtmlOverview {
     $Output+="</td><td>$($ExVersionStrings["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"].Long)"
 
     if ($Server.RollupLevel -gt 0) {
-      $Output+=" UR$($Server.RollupLevel)"
+      $Output+=(' UR{0}' -f $Server.RollupLevel)
       if ($Server.RollupVersion) {
-        $Output+=" $($Server.RollupVersion)"
+        $Output+=(' {0}' -f $Server.RollupVersion)
       }
     }
 
-    $Output+="</td>"
+    $Output+='</td>'
 
     $ExchangeEnvironment.TotalServersByRole.GetEnumerator() | Sort-Object -Property Name | ForEach-Object{ 
-      $Output+="<td"
+      $Output+='<td'
       if ($Server.Roles -contains $_.Key) {
         $Output+=" class='roledata'>"
       }
       else {
-        $Output+=" />"
+        $Output+=' />'
       }
       
       if (($_.Key -eq 'ClusteredMailbox' -or $_.Key -eq 'Mailbox' -or $_.Key -eq 'BE') -and $Server.Roles -contains $_.Key) {
-        $Output+="$($Server.Mailboxes)</td>"
+        $Output+=('{0}</td>' -f $Server.Mailboxes)
       } 
     }
 		
@@ -801,7 +824,7 @@ function Get-HtmlOverview {
         $Output+="<td align=""center"">$($Server.MaximumPreferredDatabases) / $($Server.MaximumActiveDatabases)</td><td>$($Server.OSVersion)</td><td>$($Server.OSServicePack)</td></tr>"
     }
     else {
-        $Output+="<td align=""center"">Not Applicable</td><td>$($Server.OSVersion)</td><td>$($Server.OSServicePack)</td></tr>"
+        $Output+=('<td align=""center"">Not Applicable</td><td>{0}</td><td>{1}</td></tr>' -f $Server.OSVersion, $Server.OSServicePack)
     }
 
     # $Output+="<td>$($Server.OSVersion)</td><td>$($Server.OSServicePack)</td></tr>";	
@@ -821,14 +844,13 @@ function Get-HtmlDatabaseInformationTable {
   )
 
   # Only Show Archive Mailbox Columns, Backup Columns and Circ Logging if at least one DB has an Archive mailbox, backed up or Cir Log enabled.
-  $ShowArchiveDBs=$False
-  $ShowLastFullBackup=$False
-  $ShowCircularLogging=$False
-  $ShowStorageGroups=$False
-  $ShowCopies=$False
-  $ShowFreeDatabaseSpace=$False
-  $ShowFreeLogDiskSpace=$False
-
+  $ShowArchiveDBs = $False
+  $ShowLastFullBackup = $False
+  $ShowCircularLogging = $False
+  $ShowStorageGroups = $False
+  $ShowCopies = $False
+  $ShowFreeDatabaseSpace = $False
+  $ShowFreeLogDiskSpace = $False
 
   foreach ($Database in $Databases) {
     if ($Database.ArchiveMailboxCount -gt 0) {
@@ -854,17 +876,19 @@ function Get-HtmlDatabaseInformationTable {
     }
   }
 		
-  $Output="<table class='databases'>
-    <tr class='databases'>
-  <th>Server</th>"
+  $Output="<table class='databases'>"
+
+  #region database table header
+  $Output +="<tr class='databases'>
+    <th>Server</th>"
 
   if ($ShowStorageGroups) {
-    $Output+="<th>Storage Group</th>"
+    $Output+='<th>Storage Group</th>'
   }
 
-  $Output+="<th>Database Name</th>
+  $Output+='<th>Database Name</th>
     <th>Standard Mailboxes</th>
-  <th>Av. Mailbox Size</th>"
+  <th>Av. Mailbox Size</th>'
 
   if ($ShowArchiveDBs) {
     $Output+='<th>Archive Mailboxes</th><th>Av. Archive Size</th>'
@@ -887,12 +911,19 @@ function Get-HtmlDatabaseInformationTable {
   if ($ShowCopies) {
     $Output+='<th>DB Copies (n)</th>'
   }
+
+  # Drive names, issue #4
+  if($ShowDriveNames) {
+    $Output+='<th>EDB / LOG</th>'
+  }
 	
   $Output+='</tr>'
+  #endregion
+
   $AlternateRow=0
 
   foreach ($Database in $Databases) {
-    $Output+="<tr"
+    $Output+='<tr'
 
     if ($AlternateRow) {
       $Output+=" class='alternaterow'"
@@ -954,17 +985,24 @@ function Get-HtmlDatabaseInformationTable {
     if ($ShowCopies) {
       $Output+="<td>$($Database.Copies | ForEach-Object{$_}) ($($Database.CopyCount))</td>"
     }
+    
+    # Drive names, issue #4
+    if ($ShowDriveNames) {
+      $Output+="<td class='center'>$("{0} / {1}" -f $Database.DriveNameEdb, $Database.DriveNameLog)</td>"
+    }
     $Output+='</tr>'
   }
 
   $Output+='</table><br />'
 
-  $Output+=("<p class='dagtablefooter'>Maximum mailbox database size: {0} GB<br/>Minumum free disk space: {1}%</p>" -f $MaxDatabaseSize, $MinFreeDiskspace)
+  $Output += '<p class="dagtablefooter">Explanation</p>'
+  $Output += ("<p class='dagtablefooter'>Maximum mailbox database size: {0} GB<br/>Minimum free disk space: {1}%</p>" -f $MaxDatabaseSize, $MinFreeDiskspace)
 	
   $Output
 }
 
 function Get-HtmlReportHeader {
+  [CmdletBinding()]
   param(
     $ExchangeEnvironment,
     $Path
@@ -979,23 +1017,20 @@ function Get-HtmlReportHeader {
   $UseCss = $true
 
   # Header
-  $Output="
+  $Output='
     <html>
     <body>
-  <title>Exchange Environment Report</title>"
+  <title>Exchange Environment Report</title>'
 
   if($UseCss -and (Test-Path -Path (Join-Path -Path (Split-Path -Parent $Path) -ChildPath $CssFileName))) {
     $Output += "<style type=""text/css"">$(Get-Content -Path (Join-Path -Path (Split-Path -Parent $Path) -ChildPath $CssFileName))</style>"
   }  
 
-    
-  $Output += ("<font size=""1"" face=""Segoe UI,Arial,sans-serif"">
-      <h2 align=""center"">Exchange Environment Report</h3>
-      <h4 align=""center"">Generated {0}</h5>
-      </font>
+  $Output += ("<h2 align=""center"">Exchange Environment Report</h2><h3 align=""center"">Organization: {3}</h3>
+      <h4 align=""center"">Generated {0}</h4>
       <table class='header'>
       <tr class='header'>
-  <th colspan=""{1}"" class='header'>{2}</th>" -f (Get-Date -Format $DateLabelFormat), $ExchangeEnvironment.TotalMailboxesByVersion.Count, $LabelTotalServers)
+  <th colspan=""{1}"" class='header'>{2}</th>" -f (Get-Date -Format $DateLabelFormat), $ExchangeEnvironment.TotalMailboxesByVersion.Count, $LabelTotalServers, $ExchangeEnvironment.OrganizationName)
 
   if ($ExchangeEnvironment.RemoteMailboxes) {
     $Output+=("<th colspan=""{0}"" class='header'>{1}</th>" -f ($ExchangeEnvironment.TotalMailboxesByVersion.Count+2), $LabelTotalMailboxes)
@@ -1036,12 +1071,13 @@ function Get-HtmlReportHeader {
   $ExchangeEnvironment.TotalServersByRole.GetEnumerator()|Sort-Object -Property Name| ForEach-Object{$Output+="<td class='headerdata'>$($_.Value)</td>"}
 
   #$Output+="</tr><tr><tr></table><br>"
-  $Output += "</tr></table><!-- End --><br />"
+  $Output += '</tr></table><!-- End --><br />'
 
   $Output
 }
 
 function Get-HtmlDagHeader {
+  [CmdletBinding()]
   param (
     $DAG
   )
@@ -1055,7 +1091,7 @@ function Get-HtmlDagHeader {
 
   $DAG.Members | ForEach-Object { $Output+=('{0} ' -f $_) }
 
-  $Output += "</td></tr></table><br />"
+  $Output += '</td></tr></table><br />'
 
   $Output
 }
@@ -1157,6 +1193,7 @@ $ExchangeEnvironment = @{
   Servers = @{}
   DAGs = @()
   NonDAGDatabases = @()
+  OrganizationName = ''
 }
 
 # 1.5.7 Exchange Major Version String Mapping
@@ -1265,6 +1302,10 @@ else {
 # 2.3 Populate Information we know
 $ExchangeEnvironment.Add('TotalMailboxes',$Mailboxes.Count + $ExchangeEnvironment.RemoteMailboxes)
 
+# 2.4 Organizational Info
+
+$ExchangeEnvironment.OrganizationName = (Get-OrganizationConfig).Name
+
 # 3 Process High-Level Exchange Information
 
 # 3.1 Collect Exchange Server Information
@@ -1367,8 +1408,8 @@ if ($ExchangeEnvironment.NonDAGDatabases.Count) {
 
   Show-ProgressBar -PercentComplete 80 -Status 'Writing HTML Non-DAG Database Information' -Stage 4
   
-  $Output+="<table class=""dagsummary"">
-  <tr class=""dagsummarynondag""><th>Mailbox Databases (Non-DAG)</th></table>"
+  $Output+='<table class="dagsummary">
+  <tr class="dagsummarynondag"><th>Mailbox Databases (Non-DAG)</th></table>'
 
   # Get Table HTML for non-DAG databases
   $Output+=Get-HtmlDatabaseInformationTable -Databases $ExchangeEnvironment.NonDAGDatabases

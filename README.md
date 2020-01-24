@@ -57,6 +57,15 @@ The PowerShell script does not gather information on public folders or analyzes 
 * Exchange Server Management Shell 2010 or newer
 * WMI and Remote Registry access from the computer running the script to all internal Exchange Servers
 
+## Release
+
+* 2.0 : Initial Community Release of the updated original script
+* 2.1 : Table header label updated for a more consistent labeling
+* 2.2 : Bug fixes and enhancements
+  * CCS fixes for Html header tags (issue #5)
+  * New script parameter _ShowDriveNames_ added to optionally show drive names for EDB/LOG file paths in database table (issue #4)
+  * Exchange organization name added to report header  
+
 ## Example Report
 
 ![Example Report](/images/screenshot.png)
@@ -92,6 +101,10 @@ By default, true. Set the option in Exchange 2007 or 2010 to view all Exchange s
 Use a text based string to filter Exchange Servers by, e.g., NL-*
 Note the use of the wildcard (*) character to allow for multiple matches.
 
+### ShowDriveNames
+
+Include drive names of EDB file path and LOG file folder in database report table
+
 ## Examples
 
 ### Example 1
@@ -108,6 +121,14 @@ Generate an HTML report and save the report as 'report.html'
 
 ``` PowerShell
 .\Get-ExchangeEnvironmentReport.ps1 -HTMLReport .\report.html
+```
+
+### Example 3
+
+Generate the HTML report including EDB and LOG drive names
+
+``` PowerShell
+.\Get-ExchangeEnvironmentReport.ps1 -ShowDriveNames -HTMLReport .\report.html
 ```
 
 ## Note

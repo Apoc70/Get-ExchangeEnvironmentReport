@@ -11,6 +11,14 @@ h2 {
     font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
     font-size: 14px; 
     }
+h3 { 
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+    font-size: 12px; 
+    }
+h4 { 
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+    font-size: 10px; 
+    }
 
 /* Header, first table row showing labels for totals */
 table.header {
