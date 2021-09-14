@@ -80,6 +80,7 @@ table th.subheader {
   color: #ffffff;
   font-size: 11px;
   text-align: center;
+  padding: 2px;
 }
 
 /* Header data, Mailbox numbers in header table */
