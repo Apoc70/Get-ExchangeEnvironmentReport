@@ -7,7 +7,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 	
-    Version 2.2 January 2020
+    Version 2.3 November 2021
 
     Based on the original 1.6.2 version by Steve Goodman
 
@@ -124,6 +124,9 @@ $MaxDatabaseSize = 250 # Mark database larger than this value (GB) in red
 
 # Default variables
 $NotAvailable = 'N/A'
+
+# Set TLS version o TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Sub-Function to Get Database Information. Shorter than expected..
 function Get-DatabaseAvailabilityGroupInformation {
