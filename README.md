@@ -65,6 +65,7 @@ The PowerShell script does not gather information on public folders or analyzes 
   * CCS fixes for Html header tags (issue #5)
   * New script parameter _ShowDriveNames_ added to optionally show drive names for EDB/LOG file paths in database table (issue #4)
   * Exchange organization name added to report header  
+* 2.4 : Bug fix for empty ExternalUrl parameter values
 
 ## Example Report
 
