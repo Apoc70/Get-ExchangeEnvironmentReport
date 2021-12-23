@@ -314,6 +314,21 @@ function Get-ExchangeServerMailboxCount {
 	
 }
 
+# 2021-12-23 Function added to handle empty virtual directory hostname strings (Issue #9)
+function Test-vDirHost {
+  param(
+    $VDirHost
+  )
+
+  [string]$Hostname = 'None'
+
+  if ($null -ne $VDirHost) {
+    $Hostname = ([string]$VDirHost).Trim()
+  }
+
+  $Hostname
+}
+
 # Sub-Function to Get Exchange Server information
 function Get-ExchangeServerInformation {
   [CmdletBinding()]
@@ -433,28 +448,28 @@ function Get-ExchangeServerInformation {
     # 2019-05-16 TST | Update to support 'Mailbox' role for gathering namespace information
     if (($Roles -contains 'ClientAccess' -and $E2010) -or ($Roles -contains 'Mailbox' -and $E2010))
     {        
-      Get-OWAVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=$_.ExternalURL.Host; $IntNames+=$_.InternalURL.Host }
+      Get-OWAVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
 
-      Get-WebServicesVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=$_.ExternalURL.Host; $IntNames+=$_.InternalURL.Host }
+      Get-WebServicesVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
       
-      Get-OABVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=$_.ExternalURL.Host; $IntNames+=$_.InternalURL.Host }
+      Get-OABVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
       
-      Get-ActiveSyncVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=$_.ExternalURL.Host; $IntNames+=$_.InternalURL.Host }
+      Get-ActiveSyncVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
       
       if (Get-Command -Name Get-MAPIVirtualDirectory -ErrorAction SilentlyContinue) {
-        Get-MAPIVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=$_.ExternalURL.Host; $IntNames+=$_.InternalURL.Host }
+        Get-MAPIVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
       }
       
       if (Get-Command -Name Get-ClientAccessService -ErrorAction SilentlyContinue) {
-        $IntNames+=(Get-ClientAccessService -Identity $ExchangeServer.Name).AutoDiscoverServiceInternalURI.Host
+        $IntNames+=(Test-vDirHost -VDirHost (Get-ClientAccessService -Identity $ExchangeServer.Name).AutoDiscoverServiceInternalURI.Host)
       } 
       else {
         # Fallback to use Get-ClientAccessServer cmdlet
-        $IntNames+=(Get-ClientAccessServer -Identity $ExchangeServer.Name).AutoDiscoverServiceInternalURI.Host
+        $IntNames+=(Test-vDirHost -VDirHost (Get-ClientAccessServer -Identity $ExchangeServer.Name).AutoDiscoverServiceInternalURI.Host)
       }
             
       if ($ExchangeMajorVersion -ge 14) {
-        Get-ECPVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=$_.ExternalURL.Host; $IntNames+=$_.InternalURL.Host; }
+        Get-ECPVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host); }
       }
 
       $IntNames = $IntNames | Sort-Object -Unique
@@ -744,10 +759,18 @@ function Get-HtmlOverview {
     
     $IntNames = [string]::Join(',',$IntNames)
     $ExtNames = [string]::Join(',',$ExtNames)
+    $ExtNamesEmptyText = 'At least one of the analysed servers contains an empty ExternalUrl entry.'
 
     if ($IntNames) {
-      $IntNamesText=('Internal Names: {0}' -f $IntNames)
+      
       $ExtNamesText=('External Names: {0}<br />' -f $ExtNames)
+
+      if($ExtNames -notlike '*None*') {
+        $IntNamesText=('Internal Names: {0}' -f $IntNames)
+      }
+      else {
+        $IntNamesText=('Internal Names: {0}<br />{1}' -f $IntNames, $ExtNamesEmptyText)
+      }
     }
 
     if ($CASArrayName) {
@@ -871,10 +894,10 @@ function Get-HtmlDatabaseInformationTable {
     if ($Database.CopyCount -gt 0) {
       $ShowCopies=$True
     }
-    if ($Database.FreeDatabaseDiskSpace -ne $null) {
+    if ($null -ne $Database.FreeDatabaseDiskSpace) {
       $ShowFreeDatabaseSpace=$true
     }
-    if ($Database.FreeLogDiskSpace -ne $null) {
+    if ($null -ne $Database.FreeLogDiskSpace) {
       $ShowFreeLogDiskSpace=$true
     }
   }
@@ -1126,7 +1149,7 @@ if (!(Get-Command -Name Get-ExchangeServer -ErrorAction SilentlyContinue))
   # Use $env:ExchangeInstallPath for Exchange 2010/2013+ installations
   $ExchangeInstallPath = $env:ExchangeInstallPath
 
-  if (($ExchangeInstallPath -eq '') -or ($ExchangeInstallPath -eq $null)) {
+  if (($ExchangeInstallPath -eq '') -or ($null -eq $ExchangeInstallPath)) {
     # $env:ExchangeInstallPath not available on Exchange Server 2007 Setups
     try {
       $ExchangeInstallPath = (Get-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Exchange\Setup).MsiInstallPath 
