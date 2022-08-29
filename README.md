@@ -64,7 +64,7 @@ The PowerShell script does not gather information on public folders or analyzes 
 * 2.2 : Bug fixes and enhancements
   * CCS fixes for Html header tags (issue #5)
   * New script parameter _ShowDriveNames_ added to optionally show drive names for EDB/LOG file paths in database table (issue #4)
-  * Exchange organization name added to report header  
+  * Exchange organization name added to report header
 * 2.4 : Bug fix for empty ExternalUrl parameter values
 
 ## Example Report
@@ -143,15 +143,15 @@ Based on the original 1.6.2 version by Steve Goodman.
 
 ## Stay connected
 
-- My Blog: [http://justcantgetenough.granikos.eu](http://justcantgetenough.granikos.eu)
+- My Blog: [http://blog.granikos.eu](http://blog.granikos.eu)
 - Twitter: [https://twitter.com/stensitzki](https://twitter.com/stensitzki)
 - LinkedIn: [http://de.linkedin.com/in/thomasstensitzki](http://de.linkedin.com/in/thomasstensitzki)
 - Github: [https://github.com/Apoc70](https://github.com/Apoc70)
 - MVP Blog: [https://blogs.msmvps.com/thomastechtalk/](https://blogs.msmvps.com/thomastechtalk/)
 - Tech Talk YouTube Channel (DE): [http://techtalk.granikos.eu](http://techtalk.granikos.eu)
+- Podcast (DE): [http://podcast.granikos.eu](http://podcast.granikos.eu)
 
-For more Office 365, Cloud Security, and Exchange Server stuff checkout services provided by Granikos
+For more Microsoft 365, Cloud Security, and Exchange Server stuff checkout services provided by Granikos
 
-- Blog: [http://blog.granikos.eu](http://blog.granikos.eu)
-- Website: [https://www.granikos.eu/en/](https://www.granikos.eu/en/)
+- Website: [https://granikos.eu](https://granikos.eu)
 - Twitter: [https://twitter.com/granikos_de](https://twitter.com/granikos_de)
