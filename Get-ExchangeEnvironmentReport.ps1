@@ -1,30 +1,28 @@
 <#
     .SYNOPSIS
     Creates an HTML report describing the On-Premises Exchange environment.
-   
+
     Thomas Stensitzki
-	
-    THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE 
+
+    THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
-	
+
     Version 2.4 December 2021
 
     Based on the original 1.6.2 version by Steve Goodman
 
-    Ideas, comments and suggestions to support@granikos.eu
-	
     .DESCRIPTION
-	
-    This script creates an HTML report showing the following information about an Exchange 
-    2019, 2016, 2013, 2010, and, to a lesser extent, 2007 and 2003 environment. 
-    
+
+    This script creates an HTML report showing the following information about an Exchange
+    2019, 2016, 2013, 2010, and, to a lesser extent, 2007 and 2003 environment.
+
     The reports shows the following:
-	
+
     * Report Generation Time
     * Total Servers per Exchange Version (2003 > 2010 or 2007 > 2019)
     * Total Mailboxes per Exchange Version, Office 365, and Organisation
     * Total Roles in the environment
-		
+
     Then, per site:
     * Total Mailboxes per site
     * Internal, External and CAS Array Hostnames
@@ -35,7 +33,7 @@
       o Update Rollup and rollup version
       o Roles installed on server and mailbox counts
       o OS Version and Service Pack
-      
+
     Then, per Database availability group (Exchange 2010/2013/2016/2019):
     * Total members per DAG
     * Member list
@@ -48,7 +46,7 @@
       o Circular Logging Enabled (Only shown if one or more DAG database has Circular Logging enabled)
       o Mailbox server hosting active copy
       o List of mailbox servers hosting copies and number of copies
-		
+
     Finally, per Database (Non DAG DBs/Exchange 2007/Exchange 2003)
     * Databases, detailing:
       o Storage Group (if applicable) and DB name
@@ -59,43 +57,43 @@
       o Database and log disk free
       o Last Full Backup (Only shown if one or more DAG database has been backed up)
       o Circular Logging Enabled (Only shown if one or more DAG database has Circular Logging enabled)
-		
+
     This does not detail public folder infrastructure, or examine Exchange 2007/2003 CCR/SCC clusters
     (although it attempts to detect Clustered Exchange 2007/2003 servers, signified by ClusMBX).
-	
-    IMPORTANT NOTE: The script requires WMI and Remote Registry access to Exchange servers from the server 
+
+    IMPORTANT NOTE: The script requires WMI and Remote Registry access to Exchange servers from the server
     it is run from to determine OS version, Update Rollup, Exchange 2007/2003 cluster and DB size information.
-  
-    .LINK  
-    http://scripts.granikos.eu
+
+    .LINK
+   https://github.com/Apoc70/Get-ExchangeEnvironmentReport
 
     .PARAMETER HTMLReport
     Filename to write HTML Report to
-	
+
     .PARAMETER SendMail
     Send Mail after completion. Set to $True to enable. If enabled, -MailFrom, -MailTo, -MailServer are mandatory
-	
+
     .PARAMETER MailFrom
     Email address to send from. Passed directly to Send-MailMessage as -From
-	
+
     .PARAMETER MailTo
     Email address to send to. Passed directly to Send-MailMessage as -To
-	
+
     .PARAMETER MailServer
     SMTP Mail server to attempt to send through. Passed directly to Send-MailMessage as -SmtpServer
-	  
+
     .PARAMETER ViewEntireForest
     By default, true. Set the option in Exchange 2007 or 2010 to view all Exchange servers and recipients in the forest.
-   
+
     .PARAMETER ServerFilter
-    Use a text based string to filter Exchange Servers by, e.g., NL-* 
+    Use a text based string to filter Exchange Servers by, e.g., NL-*
     Note the use of the wildcard (*) character to allow for multiple matches.
 
     .PARAMETER ShowDriveNames
     Include drive names of EDB file path and LOG file folder in database report table
-    
+
     .EXAMPLE
-    Generate the HTML report 
+    Generate the HTML report
     .\Get-ExchangeEnvironmentReport.ps1 -HTMLReport .\report.html
 
     .EXAMPLE
@@ -152,7 +150,7 @@ function Get-DatabaseInformation {
     $ArchiveMailboxes,
     $E2010
   )
-	
+
   # Circular Logging, Last Full Backup
   if ($Database.CircularLoggingEnabled) { $CircularLoggingEnabled='Yes' } else { $CircularLoggingEnabled = 'No' }
   if ($Database.LastFullBackup) { $LastFullBackup=$Database.LastFullBackup.ToString() } else { $LastFullBackup = 'Not Available' }
@@ -173,19 +171,19 @@ function Get-DatabaseInformation {
   catch {
     $DriveNameLog = $NotAvailable
   }
-	
+
   # Mailbox Average Sizes
   $MailboxStatistics = [array]($ExchangeEnvironment.Servers[$Database.Server.Name].MailboxStatistics | Where-Object {$_.Database -eq $Database.Identity})
-  
+
   if ($MailboxStatistics) {
     [long]$MailboxItemSizeB = 0
     $MailboxStatistics | ForEach-Object{ $MailboxItemSizeB+=$_.TotalItemSizeB }
     [long]$MailboxAverageSize = $MailboxItemSizeB / $MailboxStatistics.Count
-  } 
+  }
   else {
     $MailboxAverageSize = 0
   }
-	
+
   # Free Disk Space Percentage
   if ($ExchangeEnvironment.Servers[$Database.Server.Name].Disks) {
 
@@ -198,7 +196,7 @@ function Get-DatabaseInformation {
         if ($Database.LogFolderPath.PathName -like ('{0}*' -f $Disk.Name)) {
           $FreeLogDiskSpace = ($Disk.FreeSpace / $Disk.Capacity) * 100
         }
-      } 
+      }
       else {
         $StorageGroupDN = $Database.DistinguishedName.Replace(('CN={0},' -f $Database.Name),'')
         $Adsi=[adsi]"LDAP://$($Database.OriginatingServer)/$($StorageGroupDN)"
@@ -207,19 +205,19 @@ function Get-DatabaseInformation {
         }
       }
     }
-  } 
+  }
   else {
     $FreeLogDiskSpace=$null
     $FreeDatabaseDiskSpace=$null
   }
-	
+
   if ($Database.ExchangeVersion.ExchangeBuild.Major -ge 14 -and $E2010) {
     # Exchange 2010 Database Only
     $CopyCount = [int]$Database.Servers.Count
 
     if ($Database.MasterServerOrAvailabilityGroup.Name -ne $Database.Server.Name) {
       $Copies = [array]($Database.Servers | ForEach-Object { $_.Name })
-    } 
+    }
     else {
       $Copies = @()
     }
@@ -232,7 +230,7 @@ function Get-DatabaseInformation {
       [long]$ArchiveItemSizeB = 0
       $ArchiveStatistics | ForEach-Object{ $ArchiveItemSizeB+=$_.TotalItemSize.Value.ToBytes() }
       [long]$ArchiveAverageSize = $ArchiveItemSizeB / $ArchiveStatistics.Count
-    } 
+    }
     else {
       $ArchiveAverageSize = 0
     }
@@ -241,15 +239,15 @@ function Get-DatabaseInformation {
     [long]$Size = $Database.DatabaseSize.ToBytes()
     [long]$Whitespace = $Database.AvailableNewMailboxSpace.ToBytes()
     $StorageGroup = $null
-		
-  } 
+
+  }
   else {
     $ArchiveMailboxCount = 0
     $CopyCount = 0
     $Copies = @()
     # 2003 & 2007, Use WMI (Based on code by Gary Siepser, http://bit.ly/kWWMb3)
     $Size = [long](get-wmiobject -Class cim_datafile -ComputerName $Database.Server.Name -Filter ('name=''' + $Database.edbfilepath.pathname.replace('\','\\') + '''')).filesize
-    
+
     if (!$Size) {
       Write-Warning -Message ('Cannot detect database size via WMI for {0}' -f $Database.Server.Name)
       [long]$Size = 0
@@ -267,7 +265,7 @@ function Get-DatabaseInformation {
 
     $StorageGroup =$Database.DistinguishedName.Split(',')[1].Replace('CN=','')
   }
-	
+
   @{Name = $Database.Name
     StorageGroup= $StorageGroup
     ActiveOwner	= $Database.Server.Name.ToUpper()
@@ -300,7 +298,7 @@ function Get-ExchangeServerMailboxCount {
   # The following *should* work, but it doesn't. Apparently, ServerName is not always returned correctly which may be the cause of
   # reports of counts being incorrect
   #([array]($Mailboxes | Where {$_.ServerName -eq $ExchangeServer.Name})).Count
-	
+
   # ..So as a workaround, I'm going to check what databases are assigned to each server and then get the mailbox counts on a per-
   # database basis and return the resulting total. As we already have this information resident in memory it should be cheap, just
   # not as quick.
@@ -311,7 +309,7 @@ function Get-ExchangeServerMailboxCount {
   }
 
   $MailboxCount
-	
+
 }
 
 # 2021-12-23 Function added to handle empty virtual directory hostname strings (Issue #9)
@@ -333,7 +331,7 @@ function Test-vDirHost {
 function Get-ExchangeServerInformation {
   [CmdletBinding()]
   param($E2010,$ExchangeServer,$Mailboxes,$Databases,$Hybrids)
-	
+
   # Set Basic Variables
   $MailboxCount = 0
   $RollupLevel = 0
@@ -346,15 +344,15 @@ function Get-ExchangeServerInformation {
   $MaxPrefDatabases = 0
   $MaxActiveDatabases = 0
   $NotSet = '--'
-	
+
   # Get WMI Information: Operatin System
   $tWMI = Get-WmiObject -Class Win32_OperatingSystem -ComputerName $ExchangeServer.Name -ErrorAction SilentlyContinue
-  
+
   if ($tWMI) {
     $OSVersion = $tWMI.Caption.Replace('(R)','').Replace('Microsoft ','').Replace('Enterprise','Ent').Replace('Standard','Std').Replace(' Edition','')
     $OSServicePack = $tWMI.CSDVersion
     $RealName = $tWMI.CSName.ToUpper()
-  } 
+  }
   else {
     Write-Warning -Message ('Cannot detect OS information via WMI for {0}' -f $ExchangeServer.Name)
     $OSVersion = $NotAvailable
@@ -367,21 +365,21 @@ function Get-ExchangeServerInformation {
 
   if ($tWMI) {
     $Disks=$tWMI | Select-Object -Property Name,Capacity,FreeSpace | Sort-Object -Property Name
-  } 
+  }
   else {
     Write-Warning -Message ('Cannot detect OS information via WMI for {0}' -f $ExchangeServer.Name)
     $Disks=$null
   }
-	
+
   # Get Exchange Version
   if ($ExchangeServer.AdminDisplayVersion.Major -eq 6) {
     $ExchangeMajorVersion = [double]('{0}.{1}' -f $ExchangeServer.AdminDisplayVersion.Major, $ExchangeServer.AdminDisplayVersion.Minor)
     $ExchangeSPLevel = $ExchangeServer.AdminDisplayVersion.FilePatchLevelDescription.Replace('Service Pack ','')
-  } 
+  }
   elseif ($ExchangeServer.AdminDisplayVersion.Major -eq 15 -and $ExchangeServer.AdminDisplayVersion.Minor -ge 1) {
     $ExchangeMajorVersion = [double]('{0}.{1}' -f $ExchangeServer.AdminDisplayVersion.Major, $ExchangeServer.AdminDisplayVersion.Minor)
     $ExchangeSPLevel = 0
-  } 
+  }
   else {
     $ExchangeMajorVersion = $ExchangeServer.AdminDisplayVersion.Major
     $ExchangeSPLevel = $ExchangeServer.AdminDisplayVersion.Minor
@@ -393,7 +391,7 @@ function Get-ExchangeServerInformation {
     # Get Roles
     $MailboxStatistics=$null
     [array]$Roles = $ExchangeServer.ServerRole.ToString().Replace(' ','').Split(',')
-    
+
     # Add Hybrid "Role" for report
     if ($Hybrids -contains $ExchangeServer.Name) {
       $Roles+='Hybrid'
@@ -433,13 +431,13 @@ function Get-ExchangeServerInformation {
           else {
             $MaxPrefDatabases = $NotSet
           }
-          
+
           if($null -ne $mailboxServer.MaximumActiveDatabases) {
             $MaxActiveDatabases = $mailboxServer.MaximumActiveDatabases
           }
           else {
             $MaxActiveDatabases = $NotSet
-          } 
+          }
         }
       }
     }
@@ -447,27 +445,27 @@ function Get-ExchangeServerInformation {
     # Get HTTPS Names (Exchange 2010 only due to time taken to retrieve data)
     # 2019-05-16 TST | Update to support 'Mailbox' role for gathering namespace information
     if (($Roles -contains 'ClientAccess' -and $E2010) -or ($Roles -contains 'Mailbox' -and $E2010))
-    {        
+    {
       Get-OWAVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
 
       Get-WebServicesVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
-      
+
       Get-OABVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
-      
+
       Get-ActiveSyncVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
-      
+
       if (Get-Command -Name Get-MAPIVirtualDirectory -ErrorAction SilentlyContinue) {
         Get-MAPIVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host) }
       }
-      
+
       if (Get-Command -Name Get-ClientAccessService -ErrorAction SilentlyContinue) {
         $IntNames+=(Test-vDirHost -VDirHost (Get-ClientAccessService -Identity $ExchangeServer.Name).AutoDiscoverServiceInternalURI.Host)
-      } 
+      }
       else {
         # Fallback to use Get-ClientAccessServer cmdlet
         $IntNames+=(Test-vDirHost -VDirHost (Get-ClientAccessServer -Identity $ExchangeServer.Name).AutoDiscoverServiceInternalURI.Host)
       }
-            
+
       if ($ExchangeMajorVersion -ge 14) {
         Get-ECPVirtualDirectory -Server $ExchangeServer -ADPropertiesOnly | ForEach-Object{ $ExtNames+=(Test-vDirHost -VDirHost $_.ExternalURL.Host); $IntNames+=(Test-vDirHost -VDirHost $_.InternalURL.Host); }
       }
@@ -492,7 +490,7 @@ function Get-ExchangeServerInformation {
       # Exchange 2007
       default {$RegKey="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\S-1-5-18\\Products\\461C2B4266EDEF444B864AD6D9E5B613\\Patches"}
     }
-    
+
     # 2019-05-17 Thomas Stensitzki, try/catch added
     try {
       $RemoteRegistry = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine', $ExchangeServer.Name)
@@ -502,20 +500,20 @@ function Get-ExchangeServerInformation {
     }
 
     if ($null -ne $RemoteRegistry) {
-        
+
       $RUKeys = $RemoteRegistry.OpenSubKey($RegKey).GetSubKeyNames() | ForEach-Object {"$RegKey\\$_"}
-     
+
       if ($RUKeys) {
         [array]($RUKeys | ForEach-Object{$RemoteRegistry.OpenSubKey($_).GetValue('DisplayName')}) | `
         ForEach-Object{
           if ($_ -like 'Update Rollup *') {
-            $tRU = $_.Split(' ')[2]            
-            if ($tRU -like '*-*') { $tRUV=$tRU.Split('-')[1]; $tRU=$tRU.Split('-')[0] } else { $tRUV='' }            
+            $tRU = $_.Split(' ')[2]
+            if ($tRU -like '*-*') { $tRUV=$tRU.Split('-')[1]; $tRU=$tRU.Split('-')[0] } else { $tRUV='' }
             if ([int]$tRU -ge [int]$RollupLevel) { $RollupLevel=$tRU; $RollupVersion=$tRUV }
           }
         }
       }
-    } 
+    }
     else {
       Write-Warning -Message ('Cannot detect Rollup Version via Remote Registry for {0}' -f $ExchangeServer.Name)
     }
@@ -530,21 +528,21 @@ function Get-ExchangeServerInformation {
       catch {
         $RemoteRegistry = $null
       }
-      
+
       if ($RemoteRegistry) {
         $ExchangeSPLevel = $RemoteRegistry.OpenSubKey($RegKey).GetValue('DisplayName')
-        
+
         if ($ExchangeSPLevel -like '*Service Pack*' -or $ExchangeSPLevel -like '*Cumulative Update*') {
           $ExchangeSPLevel = $ExchangeSPLevel.Replace('Microsoft Exchange Server 2013 ','')
           $ExchangeSPLevel = $ExchangeSPLevel.Replace('Microsoft Exchange Server 2016 ','')
           $ExchangeSPLevel = $ExchangeSPLevel.Replace('Microsoft Exchange Server 2019 ','')
           $ExchangeSPLevel = $ExchangeSPLevel.Replace('Service Pack ','SP')
-          $ExchangeSPLevel = $ExchangeSPLevel.Replace('Cumulative Update ','CU') 
-        } 
+          $ExchangeSPLevel = $ExchangeSPLevel.Replace('Cumulative Update ','CU')
+        }
         else {
           $ExchangeSPLevel = 0
         }
-      } 
+      }
       else {
         Write-Warning -Message ('Cannot detect CU/SP via Remote Registry for {0}' -f $ExchangeServer.Name)
       }
@@ -562,7 +560,7 @@ function Get-ExchangeServerInformation {
 
     if ($tWMI) {
       if ($tWMI.IsFrontEndServer) { $Roles=@('FE') } else { $Roles=@('BE') }
-    } 
+    }
     else {
       Write-Warning -Message ('Cannot detect Front End/Back End Server information via WMI for {0}' -f $ExchangeServer.Name)
       $Roles+='Unknown'
@@ -573,32 +571,32 @@ function Get-ExchangeServerInformation {
     if ($tWMI)
     {
       $MailboxStatistics = $tWMI | Select-Object -Property @{Name='DisplayName';Expression={$_.MailboxDisplayName}},@{Name='TotalItemSizeB';Expression={$_.Size}},@{Name='TotalDeletedItemSizeB';Expression={$_.DeletedMessageSizeExtended }},@{Name='Database';Expression={((Get-MailboxDatabase -Identity "$($_.ServerName)\$($_.StorageGroupName)\$($_.StoreName)").Identity)}}
-    } 
+    }
     else {
       Write-Warning -Message ('Cannot retrieve Mailbox Statistics via WMI for {0}' -f $ExchangeServer.Name)
       $MailboxStatistics = $null
     }
-  }	
+  }
 
   # Exchange 2000
   if ($ExchangeMajorVersion -eq '6.0')
   {
     # Mailbox Count
     $MailboxCount = Get-ExchangeServerMailboxCount -Mailboxes $Mailboxes -ExchangeServer $ExchangeServer -Databases $Databases
-    
+
     # Get Role via ADSI
     $tADSI=[ADSI]"LDAP://$($ExchangeServer.OriginatingServer)/$($ExchangeServer.DistinguishedName)"
 
     if ($tADSI) {
       if ($tADSI.ServerRole -eq 1) { $Roles=@('FE') } else { $Roles=@('BE') }
-    } 
+    }
     else {
       Write-Warning -Message ('Cannot detect Front End/Back End Server information via ADSI for {0}' -f $ExchangeServer.Name)
       $Roles+='Unknown'
     }
     $MailboxStatistics = $null
   }
-	
+
   # Return Hashtable
   @{Name = $ExchangeServer.Name.ToUpper()
     RealName = $RealName
@@ -619,7 +617,7 @@ function Get-ExchangeServerInformation {
     CASArrayName = $CASArrayName
     MaximumPreferredDatabases = $MaxPrefDatabases
     MaximumActiveDatabases = $MaxActiveDatabases
-  }	
+  }
 }
 
 # Sub Function to Get Totals by Version
@@ -637,7 +635,7 @@ function Get-TotalsByVersion {
       foreach ($Server in $Site.Value) {
         if (!$TotalMailboxesByVersion["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"]) {
           $TotalMailboxesByVersion.Add("$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)",@{ServerCount=1;MailboxCount=$Server.Mailboxes})
-        } 
+        }
         else {
           $TotalMailboxesByVersion["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"].ServerCount++
           $TotalMailboxesByVersion["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"].MailboxCount+=$Server.Mailboxes
@@ -651,7 +649,7 @@ function Get-TotalsByVersion {
       foreach ($Server in $FakeSite.Value) {
         if (!$TotalMailboxesByVersion["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"]) {
           $TotalMailboxesByVersion.Add("$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)",@{ServerCount=1;MailboxCount=$Server.Mailboxes})
-        } 
+        }
         else {
           $TotalMailboxesByVersion["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"].ServerCount++
           $TotalMailboxesByVersion["$($Server.ExchangeMajorVersion).$($Server.ExchangeSPLevel)"].MailboxCount+=$Server.Mailboxes
@@ -687,7 +685,7 @@ function Get-TotalsByRole {
         foreach ($Role in $Server.Roles) {
           if ($null -eq $TotalServersByRole[$Role]) {
             $TotalServersByRole.Add($Role,1)
-          } 
+          }
           else {
             $TotalServersByRole[$Role]++
           }
@@ -697,13 +695,13 @@ function Get-TotalsByRole {
   }
 
   if ($ExchangeEnvironment.Pre2007['Pre 2007 Servers']) {
-		
+
     foreach ($Server in $ExchangeEnvironment.Pre2007['Pre 2007 Servers']) {
-			
+
       foreach ($Role in $Server.Roles) {
         if ($null -eq $TotalServersByRole[$Role]) {
           $TotalServersByRole.Add($Role,1)
-        } 
+        }
         else {
           $TotalServersByRole[$Role]++
         }
@@ -734,7 +732,7 @@ function Get-HtmlOverview {
     $CASArrayText=''
     $ColClass = 'pre2007overviewcolheader'
     $ColSubClass = 'pre2007overviewcolsubheader'
-  } 
+  }
   else {
     $BGColHeader='#000099'
     $BGColSubHeader='#0000FF'
@@ -756,13 +754,13 @@ function Get-HtmlOverview {
 
     $IntNames = $IntNames | Sort-Object -Unique
     $ExtNames = $ExtNames | Sort-Object -Unique
-    
+
     $IntNames = [string]::Join(',',$IntNames)
     $ExtNames = [string]::Join(',',$ExtNames)
     $ExtNamesEmptyText = 'At least one of the analysed servers contains an empty ExternalUrl entry.'
 
     if ($IntNames) {
-      
+
       $ExtNamesText=('External Names: {0}<br />' -f $ExtNames)
 
       if($ExtNames -notlike '*None*') {
@@ -784,7 +782,7 @@ function Get-HtmlOverview {
   <colgroup width='25%'>"
 
   $ExchangeEnvironment.TotalServersByRole.GetEnumerator() | Sort-Object -Property Name | ForEach-Object{$Output+="<col width='3%'>"}
-  
+
   $Output+="</colgroup><col width='20%'><col width='20%'>
     <tr class=""$($ColClass)"">
     <th class='overview'>$($Prefix) $($Servers.Key)</th>
@@ -800,22 +798,22 @@ function Get-HtmlOverview {
 
   # 2016-04-19 Thomas Stensitzki Pref/Max Databases added
   $Output+="<th class='overview'>Databases Pref/Max</th><th class='overview'>OS Version</th><th class='overview'>OS Service Pack</th></tr>"
-    
+
   $AlternateRow=0
-	
+
   foreach ($Server in $Servers.Value) {
     $Output+='<tr'
 
     if ($AlternateRow) {
       $Output+=" class='alternaterow'"
       $AlternateRow=0
-    } 
+    }
     else {
       $AlternateRow=1
     }
 
     $Output+=('><td>{0}' -f $Server.Name)
-    
+
     if ($Server.RealName -ne $Server.Name) {
       $Output+=(' ({0})' -f $Server.RealName)
     }
@@ -831,7 +829,7 @@ function Get-HtmlOverview {
 
     $Output+='</td>'
 
-    $ExchangeEnvironment.TotalServersByRole.GetEnumerator() | Sort-Object -Property Name | ForEach-Object{ 
+    $ExchangeEnvironment.TotalServersByRole.GetEnumerator() | Sort-Object -Property Name | ForEach-Object{
       $Output+='<td'
       if ($Server.Roles -contains $_.Key) {
         $Output+=" class='roledata'>"
@@ -839,21 +837,21 @@ function Get-HtmlOverview {
       else {
         $Output+=' />'
       }
-      
+
       if (($_.Key -eq 'ClusteredMailbox' -or $_.Key -eq 'Mailbox' -or $_.Key -eq 'BE') -and $Server.Roles -contains $_.Key) {
         $Output+=('{0}</td>' -f $Server.Mailboxes)
-      } 
+      }
     }
-		
-    # 2016-04-19 Thomas Stensitzki Max Databases added	
-    if($Server.Roles -contains 'Mailbox') {	
+
+    # 2016-04-19 Thomas Stensitzki Max Databases added
+    if($Server.Roles -contains 'Mailbox') {
         $Output+="<td align=""center"">$($Server.MaximumPreferredDatabases) / $($Server.MaximumActiveDatabases)</td><td>$($Server.OSVersion)</td><td>$($Server.OSServicePack)</td></tr>"
     }
     else {
         $Output+=('<td align=""center"">Not Applicable</td><td>{0}</td><td>{1}</td></tr>' -f $Server.OSVersion, $Server.OSServicePack)
     }
 
-    # $Output+="<td>$($Server.OSVersion)</td><td>$($Server.OSServicePack)</td></tr>";	
+    # $Output+="<td>$($Server.OSVersion)</td><td>$($Server.OSServicePack)</td></tr>";
   }
 
   $Output+='<tr />
@@ -901,7 +899,7 @@ function Get-HtmlDatabaseInformationTable {
       $ShowFreeLogDiskSpace=$true
     }
   }
-		
+
   $Output="<table class='databases'>"
 
   #region database table header
@@ -921,7 +919,7 @@ function Get-HtmlDatabaseInformationTable {
   }
 
   $Output+='<th>DB Size</th><th>DB Whitespace</th>'
-  
+
   if ($ShowFreeDatabaseSpace) {
     $Output+='<th>Database Disk Free</th>'
   }
@@ -942,7 +940,7 @@ function Get-HtmlDatabaseInformationTable {
   if($ShowDriveNames) {
     $Output+='<th>EDB / LOG</th>'
   }
-	
+
   $Output+='</tr>'
   #endregion
 
@@ -954,11 +952,11 @@ function Get-HtmlDatabaseInformationTable {
     if ($AlternateRow) {
       $Output+=" class='alternaterow'"
       $AlternateRow=0
-    } 
+    }
     else {
       $AlternateRow=1
     }
-		
+
     # Close open <tr tag
     $Output+=('><td>{0}</td>' -f $Database.ActiveOwner)
 
@@ -971,7 +969,7 @@ function Get-HtmlDatabaseInformationTable {
     <td class='center'>$("{0:N2}" -f ($Database.MailboxAverageSize/1MB)) MB</td>"
 
     if ($ShowArchiveDBs) {
-      $Output+="<td class=""center"">$($Database.ArchiveMailboxCount)</td> 
+      $Output+="<td class=""center"">$($Database.ArchiveMailboxCount)</td>
       <td class='center'>$("{0:N2}" -f ($Database.ArchiveAverageSize/1MB)) MB</td>"
     }
 
@@ -987,7 +985,7 @@ function Get-HtmlDatabaseInformationTable {
     # $Output+="<td align=""center"">$("{0:N2}" -f ($Database.Size/1GB)) GB </td><td class='center'>$("{0:N2}" -f ($Database.Whitespace/1GB)) GB</td>"
 
     if ($ShowFreeDatabaseSpace) {
-      if([double]($Database.FreeDatabaseDiskSpace) -gt $MinFreeDiskspace) { 
+      if([double]($Database.FreeDatabaseDiskSpace) -gt $MinFreeDiskspace) {
         $Output+="<td class='center'>$("{0:N1}" -f $Database.FreeDatabaseDiskSpace)%</td>"
       }
       else {
@@ -1011,7 +1009,7 @@ function Get-HtmlDatabaseInformationTable {
     if ($ShowCopies) {
       $Output+="<td>$($Database.Copies | ForEach-Object{$_}) ($($Database.CopyCount))</td>"
     }
-    
+
     # Drive names, issue #4
     if ($ShowDriveNames) {
       $Output+="<td class='center'>$("{0} / {1}" -f $Database.DriveNameEdb, $Database.DriveNameLog)</td>"
@@ -1023,7 +1021,7 @@ function Get-HtmlDatabaseInformationTable {
 
   $Output += '<p class="dagtablefooter">Explanation</p>'
   $Output += ("<p class='dagtablefooter'>Maximum mailbox database size: {0} GB<br/>Minimum free disk space: {1}%</p>" -f $MaxDatabaseSize, $MinFreeDiskspace)
-	
+
   $Output
 }
 
@@ -1050,7 +1048,7 @@ function Get-HtmlReportHeader {
 
   if($UseCss -and (Test-Path -Path (Join-Path -Path (Split-Path -Parent $Path) -ChildPath $CssFileName))) {
     $Output += "<style type=""text/css"">$(Get-Content -Path (Join-Path -Path (Split-Path -Parent $Path) -ChildPath $CssFileName))</style>"
-  }  
+  }
 
   $Output += ("<h2 align=""center"">Exchange Environment Report</h2><h3 align=""center"">Organization: {3}</h3>
       <h4 align=""center"">Generated {0}</h4>
@@ -1060,11 +1058,11 @@ function Get-HtmlReportHeader {
 
   if ($ExchangeEnvironment.RemoteMailboxes) {
     $Output+=("<th colspan=""{0}"" class='header'>{1}</th>" -f ($ExchangeEnvironment.TotalMailboxesByVersion.Count+2), $LabelTotalMailboxes)
-  } 
+  }
   else {
     $Output+=("<th colspan=""{0}"" class='header'>{1}</th>" -f ($ExchangeEnvironment.TotalMailboxesByVersion.Count+1), $LabelTotalMailboxes)
   }
-  
+
   $Output+=("<th colspan=""{0}"" class='header'>{1}</th></tr>
   <tr class='subheader'>" -f $ExchangeEnvironment.TotalServersByRole.Count, $LabelTotalRoles)
 
@@ -1113,7 +1111,7 @@ function Get-HtmlDagHeader {
     <col width='20%'><col width='10%'><col width='10%'><col width='70%''>
     <tr class=""dagsummary""><th>Database Availability Group Name</th><th>Member Count</th><th># Databases</th>
     <th>Database Availability Group Members</th></tr>
-  <tr><td>$($DAG.Name)</td><td>$($DAG.MemberCount)</td><td>$(($DAG.Databases | Measure-Object).Count)</td><td>" 
+  <tr><td>$($DAG.Name)</td><td>$($DAG.MemberCount)</td><td>$(($DAG.Databases | Measure-Object).Count)</td><td>"
 
   $DAG.Members | ForEach-Object { $Output+=('{0} ' -f $_) }
 
@@ -1152,7 +1150,7 @@ if (!(Get-Command -Name Get-ExchangeServer -ErrorAction SilentlyContinue))
   if (($ExchangeInstallPath -eq '') -or ($null -eq $ExchangeInstallPath)) {
     # $env:ExchangeInstallPath not available on Exchange Server 2007 Setups
     try {
-      $ExchangeInstallPath = (Get-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Exchange\Setup).MsiInstallPath 
+      $ExchangeInstallPath = (Get-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Exchange\Setup).MsiInstallPath
     }
     catch {}
   }
@@ -1163,13 +1161,13 @@ if (!(Get-Command -Name Get-ExchangeServer -ErrorAction SilentlyContinue))
   $LocalExchangePath = Join-Path -Path $ExchangeInstallPath -ChildPath 'bin\Exchange.ps1'
 
   if (Test-Path -Path $RemoteExchangePath) {
-    . $RemoteExchangePath 
+    . $RemoteExchangePath
     Connect-ExchangeServer -auto
-  } 
+  }
   elseif (Test-Path -Path $LocalExchangePath) {
     Add-PSSnapIn -Name Microsoft.Exchange.Management.PowerShell.Admin
     . $LocalExchangePath
-  } 
+  }
   else {
     throw 'Exchange Management Shell cannot be loaded'
   }
@@ -1193,7 +1191,7 @@ if ((Get-PSSnapin -Name Microsoft.Exchange.Management.PowerShell.Admin -ErrorAct
   }
 }
 else{
-    
+
   $E2010 = $true
 
   # 2019-05-17 Thomas Stensitzki, Support for Exchange 2013+ servers with installed management tools
@@ -1205,7 +1203,7 @@ else{
 # 1.4 Check view entire forest if set (by default, true)
 if ($E2010) {
   Set-ADServerSettings -ViewEntireForest:$ViewEntireForest
-} 
+}
 else {
   $global:AdminSessionADSettings.ViewEntireForest = $ViewEntireForest
 }
@@ -1243,7 +1241,7 @@ $ExSPLevelStrings = @{
   'SP1' = 'SP1'
 'SP2' = 'SP2'}
 
-# Add many CUs               
+# Add many CUs
 for ($i = 1; $i -le 40; $i++) {
   $ExSPLevelStrings.Add("CU$($i)","CU$($i)");
 }
@@ -1291,33 +1289,33 @@ Show-ProgressBar -PercentComplete 10 -Status 'Getting Mailboxes' -Stage 1
 
 $Mailboxes = [array](Get-Mailbox -ResultSize Unlimited) | Where-Object {$_.ServerName -like $ServerFilter}
 
-if ($E2010) { 
+if ($E2010) {
 
   Show-ProgressBar -PercentComplete 60 -Status 'Getting Archive Mailboxes' -Stage 1
 
   $ArchiveMailboxes = [array](Get-Mailbox -Archive -ResultSize Unlimited) | Where-Object {$_.ServerName -like $ServerFilter}
-  
+
   Show-ProgressBar -PercentComplete 70 -Status 'Getting Remote Mailboxes' -Stage 1
 
   $RemoteMailboxes = [array](Get-RemoteMailbox -ResultSize Unlimited)
   $ExchangeEnvironment.Add('RemoteMailboxes',$RemoteMailboxes.Count)
-  
+
   Show-ProgressBar -PercentComplete 90 -Status 'Getting Databases' -Stage 1
 
-  if ($E2013) {	
+  if ($E2013) {
     # 2019-05-17 TST Sorting added
-    $Databases = [array](Get-MailboxDatabase -IncludePreExchange2013 -Status) | Sort-Object -Property Name | Where-Object {$_.Server -like $ServerFilter} 
+    $Databases = [array](Get-MailboxDatabase -IncludePreExchange2013 -Status) | Sort-Object -Property Name | Where-Object {$_.Server -like $ServerFilter}
   }
-  elseif ($E2010) {	
+  elseif ($E2010) {
     # 2019-05-17 TST Sorting added
-    $Databases = [array](Get-MailboxDatabase -IncludePreExchange2010 -Status) | Sort-Object -Property Name | Where-Object {$_.Server -like $ServerFilter} 
+    $Databases = [array](Get-MailboxDatabase -IncludePreExchange2010 -Status) | Sort-Object -Property Name | Where-Object {$_.Server -like $ServerFilter}
   }
 
   $DAGs = [array](Get-DatabaseAvailabilityGroup) | Where-Object {$_.Servers -like $ServerFilter}
-} 
+}
 else {
   $ArchiveMailboxes = $null
-  $ArchiveMailboxStats = $null	
+  $ArchiveMailboxStats = $null
   $DAGs = $null
 
   Show-ProgressBar -PercentComplete 90 -Status 'Getting Databases' -Stage 1
@@ -1340,22 +1338,22 @@ for ($i=0; $i -lt $ExchangeServers.Count; $i++) {
 
   # Get Exchange Info
   $ExSvr = Get-ExchangeServerInformation -E2010 $E2010 -ExchangeServer $ExchangeServers[$i] -Mailboxes $Mailboxes -Databases $Databases -Hybrids $HybridServers
-  
+
   # Add to site or pre-Exchange 2007 list
   if ($ExSvr.Site) {
     # Exchange 2007 or higher
     if (!$ExchangeEnvironment.Sites[$ExSvr.Site]) {
       $ExchangeEnvironment.Sites.Add($ExSvr.Site,@($ExSvr))
-    } 
+    }
     else {
       $ExchangeEnvironment.Sites[$ExSvr.Site]+=$ExSvr
     }
-  } 
+  }
   else {
     # Exchange 2003 or lower
     if (!$ExchangeEnvironment.Pre2007['Pre 2007 Servers']) {
       $ExchangeEnvironment.Pre2007.Add('Pre 2007 Servers',@($ExSvr))
-    } 
+    }
     else {
       $ExchangeEnvironment.Pre2007['Pre 2007 Servers']+=$ExSvr
     }
@@ -1424,7 +1422,7 @@ foreach ($DAG in $ExchangeEnvironment.DAGs) {
 
     # Get DAG Header
     $Output += Get-HtmlDagHeader -DAG $DAG
-		
+
     # Get Table HTML for DAG databases
     $Output += Get-HtmlDatabaseInformationTable -Databases $DAG.Databases
   }
@@ -1433,7 +1431,7 @@ foreach ($DAG in $ExchangeEnvironment.DAGs) {
 if ($ExchangeEnvironment.NonDAGDatabases.Count) {
 
   Show-ProgressBar -PercentComplete 80 -Status 'Writing HTML Non-DAG Database Information' -Stage 4
-  
+
   $Output+='<table class="dagsummary">
   <tr class="dagsummarynondag"><th>Mailbox Databases (Non-DAG)</th></table>'
 
@@ -1450,7 +1448,7 @@ $Output+='</body></html>'
 # 2019-05-20 TST Updated to ensure script path as storage location
 $HtmlReportFullPath = Join-Path -Path (Split-Path -Path $script:MyInvocation.MyCommand.Path) -ChildPath $HTMLReport
 
-$Output | Out-File -FilePath $HtmlReportFullPath -Force -Encoding utf8 
+$Output | Out-File -FilePath $HtmlReportFullPath -Force -Encoding utf8
 
 
 if ($SendMail)
@@ -1459,8 +1457,8 @@ if ($SendMail)
 
   # 2019-05-17 TST, Changed to .NET send method to work as scheduled job
 
-  $smtpMail = New-Object Net.Mail.SmtpClient($MailServer) 
-  
+  $smtpMail = New-Object Net.Mail.SmtpClient($MailServer)
+
   $smtpMessage = New-Object System.Net.Mail.MailMessage $MailFrom, $MailTo
 
   if(Test-Path -Path $HtmlReportFullPath) {
@@ -1469,7 +1467,7 @@ if ($SendMail)
   }
 
   $smtpMessage.Subject = 'Exchange Environment Report'
-  $smtpMessage.Body = $Output   
+  $smtpMessage.Body = $Output
   $smtpMessage.IsBodyHtml = $true
 
   $smtpMail.Send($smtpMessage)
