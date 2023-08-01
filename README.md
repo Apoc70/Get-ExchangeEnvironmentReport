@@ -8,6 +8,8 @@ Based on the original 1.6.2 version by Steve Goodman
 
 This script creates an HTML report showing the following information about an Exchange 2019, 2016, 2013, 2010, and, to a lesser extent, 2007 and 2003 environment.
 
+The HTML report requires the CSS file that is part of this repository for proper HTML formatting.
+
 The report shows the following:
 
 * As summary
@@ -56,6 +58,7 @@ The PowerShell script does not gather information on public folders or analyzes 
 
 * Exchange Server Management Shell 2010 or newer
 * WMI and Remote Registry access from the computer running the script to all internal Exchange Servers
+* CSS file for HTML formatting
 
 ## Release
 
@@ -66,6 +69,7 @@ The PowerShell script does not gather information on public folders or analyzes 
   * New script parameter _ShowDriveNames_ added to optionally show drive names for EDB/LOG file paths in database table (issue #4)
   * Exchange organization name added to report header
 * 2.4 : Bug fix for empty ExternalUrl parameter values
+* 2.5 : Issue #6 fixed - CSS file check added
 
 ## Example Report
 
@@ -106,6 +110,11 @@ Note the use of the wildcard (*) character to allow for multiple matches.
 
 Include drive names of EDB file path and LOG file folder in database report table
 
+### CssFileName
+
+The filename containing the Cascading Style Sheet (CSS) information fpr the HTML report
+Default: EnvironmentReport.css
+
 ## Examples
 
 ### Example 1
@@ -132,6 +141,14 @@ Generate the HTML report including EDB and LOG drive names
 .\Get-ExchangeEnvironmentReport.ps1 -ShowDriveNames -HTMLReport .\report.html
 ```
 
+### Example 4
+
+Generate the HTML report using a custom CSS file
+
+``` PowerShell
+.\Get-ExchangeEnvironmentReport.ps1 -HTMLReport .\report.html -CssFileName MyCustomCSSFile.css
+```
+
 ## Note
 
 THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
@@ -143,15 +160,16 @@ Based on the original 1.6.2 version by Steve Goodman.
 
 ## Stay connected
 
-- My Blog: [http://blog.granikos.eu](http://blog.granikos.eu)
+- My Blog: [https://blog.granikos.eu](https://blog.granikos.eu)
 - Twitter: [https://twitter.com/stensitzki](https://twitter.com/stensitzki)
 - LinkedIn: [http://de.linkedin.com/in/thomasstensitzki](http://de.linkedin.com/in/thomasstensitzki)
 - Github: [https://github.com/Apoc70](https://github.com/Apoc70)
 - MVP Blog: [https://blogs.msmvps.com/thomastechtalk/](https://blogs.msmvps.com/thomastechtalk/)
 - Tech Talk YouTube Channel (DE): [http://techtalk.granikos.eu](http://techtalk.granikos.eu)
 - Podcast (DE): [http://podcast.granikos.eu](http://podcast.granikos.eu)
+- LinkTree: [https://linktr.ee/stensitzki](https://linktr.ee/stensitzki)
 
-For more Microsoft 365, Cloud Security, and Exchange Server stuff checkout services provided by Granikos
+For more Exchange Server, Microsoft 365, and Cloud Security checkout the services provided by Granikos.
 
 - Website: [https://granikos.eu](https://granikos.eu)
 - Twitter: [https://twitter.com/granikos_de](https://twitter.com/granikos_de)
