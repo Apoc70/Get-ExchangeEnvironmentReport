@@ -4,6 +4,10 @@ Creates an HTML report describing the On-Premises Exchange environment.
 
 Based on the original 1.6.2 version by Steve Goodman
 
+## NOTE
+
+This reposiroty is archived. You can find updated versions of the script in this new [repository](https://github.com/Apoc70/PowerShell-Scripts).
+
 ## Description
 
 This script creates an HTML report showing the following information about an Exchange 2019, 2016, 2013, 2010, and, to a lesser extent, 2007 and 2003 environment.

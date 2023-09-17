@@ -119,7 +119,8 @@
 #>
 [CmdletBinding()]
 param(
-  [parameter(Position = 0, Mandatory, HelpMessage = 'Filename to write HTML report to')][string]$HTMLReport,
+  [parameter(Position = 0, Mandatory, HelpMessage = 'Filename to write HTML report to')]
+  [string]$HTMLReport,
   [switch]$SendMail,
   [string]$MailFrom = '',
   [string]$MailTo = '',
